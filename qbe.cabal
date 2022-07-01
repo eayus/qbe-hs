@@ -2,17 +2,30 @@ cabal-version:      3.0
 name:               qbe
 -- First component matches the QBE major version
 version:            1.1.0.0
--- synopsis:
--- description:
+synopsis:           Types and prettyprinter for the IL of the QBE compiler backend
+description:
+  This library provides types representing the intermediate language of the QBE
+  compiler backend.
+  It also provides pretty-printing instances based on
+  the [@prettyprinter@](https://hackage.haskell.org/package/prettyprinter)
+  library, that emit the textual representation of the IL.
+homepage:           https://sr.ht/~fgaz/qbe-hs
+bug-reports:        https://todo.sr.ht/~fgaz/qbe-hs
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Francesco Gazzetta
-maintainer:         fgaz@fgaz.me
+maintainer:         Francesco Gazzetta <fgaz@fgaz.me>
 copyright:          2022 Francesco Gazzetta
 category:           Language
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 extra-source-files: golden/*.qbe
+tested-with:
+    , GHC == 9.2.2
+
+source-repository head
+    type:     git
+    location: https://git.sr.ht/~fgaz/qbe-hs
 
 common common
     ghc-options: -Wall
