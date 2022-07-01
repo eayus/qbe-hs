@@ -1,0 +1,32 @@
+cabal-version:      3.0
+name:               qbe
+-- First component matches the QBE major version
+version:            1.1.0.0
+-- synopsis:
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Francesco Gazzetta
+maintainer:         fgaz@fgaz.me
+copyright:          2022 Francesco Gazzetta
+category:           Language
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+library
+    exposed-modules:  Language.QBE
+    -- other-modules:
+    other-extensions: DataKinds
+                      KindSignatures
+                      GeneralizedNewtypeDeriving
+    build-depends:    base ^>=4.16.1.0
+                    , text
+                    , text-short
+                    , bytestring
+                    , hashable
+                    , deepseq
+                    , binary
+    hs-source-dirs:   src
+    ghc-options: -Wall
+    default-language: Haskell2010
