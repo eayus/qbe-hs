@@ -12,7 +12,7 @@ copyright:          2022 Francesco Gazzetta
 category:           Language
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
--- extra-source-files:
+extra-source-files: golden/*.qbe
 
 common common
     ghc-options: -Wall
