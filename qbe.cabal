@@ -14,12 +14,24 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
+common common
+    ghc-options: -Wall
+                 -Wunused-packages
+                 -Wmissing-home-modules
+                 -Wredundant-constraints
+                 -Wincomplete-uni-patterns
+                 -Wincomplete-record-updates
+    default-language: Haskell2010
+
 library
+    import:           common
     exposed-modules:  Language.QBE
     -- other-modules:
     other-extensions: DataKinds
                       KindSignatures
                       GeneralizedNewtypeDeriving
+                      FlexibleInstances
+                      OverloadedStrings
     build-depends:    base ^>=4.16.1.0
                     , text
                     , text-short
@@ -27,6 +39,21 @@ library
                     , hashable
                     , deepseq
                     , binary
+                    , prettyprinter
     hs-source-dirs:   src
-    ghc-options: -Wall
-    default-language: Haskell2010
+
+test-suite golden
+    import:           common
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:    base
+                    , qbe
+                    , filepath
+                    , tasty
+                    , tasty-silver
+                    , prettyprinter
+    other-extensions: TypeApplications
+                      OverloadedStrings
+                      DataKinds
+                      ExistentialQuantification

@@ -1,0 +1,1 @@
+jnz 0, @target1, @target2

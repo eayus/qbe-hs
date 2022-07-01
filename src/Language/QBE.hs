@@ -1,13 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QBE where
 
 import Data.Text (Text)
 import Data.Text.Short (ShortText)
+import qualified Data.Text.Short as TS
 import Data.ByteString (ByteString)
 import Data.Word (Word64)
 import Data.List.NonEmpty (NonEmpty)
+import Prettyprinter
+  ( Pretty(pretty), (<+>)
+  , space, encloseSep, lbrace, rbrace, comma, equals, braces )
 -- Instances
 import Data.Hashable (Hashable)
 import Control.DeepSeq (NFData)
@@ -28,8 +34,31 @@ data Sigil
 
 -- | QBE identifiers. The sigil is represented at the type level, so that
 -- mixing incompatible identifiers is impossible.
+--
+-- >>> :set -XOverloadedStrings
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> pretty $ Jmp $ Ident @'Label "a"
+-- jmp @a
+-- >>> pretty $ Jmp $ Ident @'Global "a"
+-- <interactive>:5:16: error:
+--     • Couldn't match type ‘'Global’ with ‘'Label’
+--       Expected: Ident 'Label
+--         Actual: Ident 'Global
+--     • In the second argument of ‘($)’, namely ‘Ident @'Global "a"’
+--       In the second argument of ‘($)’, namely ‘Jmp $ Ident @'Global "a"’
+--       In the expression: pretty $ Jmp $ Ident @'Global "a"
 newtype Ident (t :: Sigil) = Ident RawIdent
   deriving (Show, Eq, Ord, IsString, Binary, NFData, Hashable)
+
+instance Pretty (Ident 'AggregateTy) where
+  pretty (Ident raw) = pretty ':' <> pretty (TS.toText raw)
+instance Pretty (Ident 'Global) where
+  pretty (Ident raw) = pretty '$' <> pretty (TS.toText raw)
+instance Pretty (Ident 'Temporary) where
+  pretty (Ident raw) = pretty '%' <> pretty (TS.toText raw)
+instance Pretty (Ident 'Label) where
+  pretty (Ident raw) = pretty '@' <> pretty (TS.toText raw)
 
 -- * Types
 ----------
@@ -37,8 +66,19 @@ newtype Ident (t :: Sigil) = Ident RawIdent
 data BaseTy = Word | Long | Single | Double
   deriving (Show, Eq)
 
+instance Pretty BaseTy where
+  pretty Word   = pretty 'w'
+  pretty Long   = pretty 'l'
+  pretty Single = pretty 's'
+  pretty Double = pretty 'd'
+
 data ExtTy = BaseTy BaseTy | Byte | HalfWord
   deriving (Show, Eq)
+
+instance Pretty ExtTy where
+  pretty (BaseTy baseTy) = pretty baseTy
+  pretty Byte = pretty 'b'
+  pretty HalfWord = pretty 'h'
 
 -- * Constants
 --------------
@@ -50,6 +90,13 @@ data Const
   | CGlobal (Ident 'Global)
   deriving (Show, Eq)
 
+instance Pretty Const where
+  pretty (CInt negative int) | negative = pretty '-' <> pretty int
+                             | otherwise = pretty int
+  pretty (CSingle float) = "s_" <> pretty float
+  pretty (CDouble double) = "d_" <> pretty double
+  pretty (CGlobal ident) = pretty ident
+
 -- * Linkage
 ------------
 
@@ -57,6 +104,12 @@ data Linkage
   = Export
   | Section ShortText (Maybe Text)
   deriving (Show, Eq)
+
+instance Pretty Linkage where
+  pretty Export = "export"
+  pretty (Section secName Nothing) = "section" <+> pretty (TS.toText secName)
+  pretty (Section secName (Just secFlags)) =
+    "section" <+> pretty (TS.toText secName) <+> pretty secFlags
 
 -- * Definitions
 ----------------
@@ -73,10 +126,26 @@ data Typedef
   | Opaque (Ident 'AggregateTy) Alignment Size
   deriving (Show, Eq)
 
+instance Pretty Typedef where
+  pretty (Typedef ident alignment def) =
+    "type" <+> pretty ident <+> equals
+    <> maybe mempty (\x -> space <> pretty x) alignment
+    <+> encloseSep lbrace rbrace (comma <> space) (prettyItem <$> def)
+    where
+      prettyItem (subTy, Nothing    ) = pretty subTy
+      prettyItem (subTy, Just amount) = pretty subTy <+> pretty amount
+  pretty (Opaque ident alignment size) =
+    "type" <+> pretty ident <+> equals
+    <+> "align" <+> pretty alignment <+> braces (pretty size)
+
 data SubTy
-  = SubExtTy
+  = SubExtTy ExtTy
   | SubAggregateTy (Ident 'AggregateTy)
   deriving (Show, Eq)
+
+instance Pretty SubTy where
+  pretty (SubExtTy extTy) = pretty extTy
+  pretty (SubAggregateTy ident) = pretty ident
 
 -- ** Data
 ----------
@@ -120,6 +189,11 @@ data Val
   | ValGlobal (Ident 'Global)
   deriving (Show, Eq)
 
+instance Pretty Val where
+  pretty (ValConst c) = pretty c
+  pretty (ValTemporary ident) = pretty ident
+  pretty (ValGlobal ident) = pretty ident
+
 data Block = Block (Ident 'Label) [Phi] [Inst] Jump
   deriving (Show, Eq)
 
@@ -128,6 +202,14 @@ data Jump
   | Jnz Val (Ident 'Label) (Ident 'Label)
   | Ret (Maybe Val)
   deriving (Show, Eq)
+
+instance Pretty Jump where
+  pretty (Jmp ident) = "jmp" <+> pretty ident
+  pretty (Jnz val label1 label2) =
+    "jnz" <+> pretty val <> comma
+    <+> pretty label1 <> comma
+    <+> pretty label2
+  pretty (Ret val) = "ret" <+> pretty val
 
 -- * Instructions
 -----------------
