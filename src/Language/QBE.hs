@@ -17,7 +17,6 @@ import Prettyprinter
 -- Instances
 import Data.Hashable (Hashable)
 import Control.DeepSeq (NFData)
-import Data.Binary (Binary)
 import Data.String (IsString)
 
 -- * Identifiers
@@ -49,7 +48,7 @@ data Sigil
 --       In the second argument of ‘($)’, namely ‘Jmp $ Ident @'Global "a"’
 --       In the expression: pretty $ Jmp $ Ident @'Global "a"
 newtype Ident (t :: Sigil) = Ident RawIdent
-  deriving (Show, Eq, Ord, IsString, Binary, NFData, Hashable)
+  deriving (Show, Eq, Ord, IsString, NFData, Hashable)
 
 instance Pretty (Ident 'AggregateTy) where
   pretty (Ident raw) = pretty ':' <> pretty (TS.toText raw)

@@ -51,7 +51,6 @@ library
                     , bytestring
                     , hashable
                     , deepseq
-                    , binary
                     , prettyprinter
     hs-source-dirs:   src
 
