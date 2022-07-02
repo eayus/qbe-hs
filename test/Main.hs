@@ -34,18 +34,18 @@ goldenTests = testGroup "golden tests"
       , CInt False 2
       , CSingle 0.1
       , CDouble (-0.2)
-      , CGlobal $ Ident "global"
+      , CGlobal "global"
       ]
   , t "linkage" (Export, Section "secName" Nothing, Section "secName" $ Just "flag1 flag2")
-  , t "typedef" $ Typedef (Ident "t") (Just 8)
+  , t "typedef" $ Typedef "t" (Just 8)
       [ (SubExtTy HalfWord, Just 16)
-      , (SubAggregateTy (Ident "t1"), Nothing)
+      , (SubAggregateTy "t1", Nothing)
       ]
-  , t "opaque" $ Opaque (Ident "t") 8 16
-  , t "val" [ValConst (CInt False 0), ValTemporary $ Ident "temporary", ValGlobal $ Ident "global"]
-  , t "jmp" $ Jmp $ Ident "target"
-  , t "jnz" $ Jnz (ValConst $ CInt False 0) (Ident "target1") (Ident "target2")
-  , t "ret" $ Ret $ Just $ ValTemporary $ Ident "x"
+  , t "opaque" $ Opaque "t" 8 16
+  , t "val" [ValConst (CInt False 0), ValTemporary "temporary", ValGlobal "global"]
+  , t "jmp" $ Jmp "target"
+  , t "jnz" $ Jnz (ValConst $ CInt False 0) "target1" "target2"
+  , t "ret" $ Ret $ Just $ ValTemporary "x"
   ]
   where
     t name value = goldenVsAction
