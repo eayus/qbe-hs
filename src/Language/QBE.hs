@@ -10,9 +10,10 @@ import Data.Text.Short (ShortText)
 import qualified Data.Text.Short as TS
 import Data.ByteString (ByteString)
 import Data.Word (Word64)
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty, toList)
+import Data.Maybe (maybeToList)
 import Prettyprinter
-  ( Pretty(pretty), (<+>)
+  ( Pretty(pretty), (<+>), vsep, hsep
   , space, encloseSep, lbrace, rbrace, comma, equals, braces )
 -- Instances
 import Data.Hashable (Hashable)
@@ -152,16 +153,34 @@ instance Pretty SubTy where
 data DataDef = DataDef [Linkage] (Ident 'Global) (Maybe Alignment) [Field]
   deriving (Show, Eq)
 
+instance Pretty DataDef where
+  pretty (DataDef linkage ident alignment fields) = vsep
+    [ vsep $ pretty <$> linkage
+    , hsep $ ("data" <+> pretty ident <+> equals)
+           : maybeToList (("align" <+>) . pretty <$> alignment)
+    , encloseSep lbrace rbrace (comma <> space) (pretty <$> fields)
+    ]
+
 data DataItem
-  = Symbol (Ident 'Global) Alignment
+  = Symbol (Ident 'Global) (Maybe Alignment)
   | String ByteString
   | Const Const
   deriving (Show, Eq)
+
+instance Pretty DataItem where
+  pretty (Symbol ident alignment) =
+    hsep $ pretty ident : maybeToList ((pretty '+' <+>) . pretty <$> alignment)
+  pretty (String bs) = pretty $ show bs -- HACK: hoping that the escape sequences are the same...
+  pretty (Const c) = pretty c
 
 data Field
   = FieldExtTy ExtTy (NonEmpty DataItem)
   | FieldZero Size
   deriving (Show, Eq)
+
+instance Pretty Field where
+  pretty (FieldExtTy extTy items) = pretty extTy <+> hsep (toList $ pretty <$> items)
+  pretty (FieldZero size) = pretty 'z' <+> pretty size
 
 -- ** Functions
 ---------------

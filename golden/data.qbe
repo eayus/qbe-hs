@@ -1,0 +1,3 @@
+export
+data $d = align 8
+{z 16, b $g + 32 "foo\nbar\NULbaz" -1}

@@ -11,6 +11,7 @@ import Test.Tasty.Silver (goldenVsAction)
 import System.FilePath ((</>), (<.>))
 import Prettyprinter (Pretty(pretty), layoutPretty, defaultLayoutOptions)
 import Prettyprinter.Render.Text (renderStrict)
+import Data.List.NonEmpty (NonEmpty((:|)))
 
 
 data P = forall a. Pretty a => P a
@@ -42,6 +43,10 @@ goldenTests = testGroup "golden tests"
       , (SubAggregateTy "t1", Nothing)
       ]
   , t "opaque" $ Opaque "t" 8 16
+  , t "data" $ DataDef [Export] "d" (Just 8)
+      [ FieldZero 16
+      , FieldExtTy Byte $ Symbol "g" (Just 32) :| [String "foo\nbar\0baz", Const $ CInt True 1]
+      ]
   , t "val" [ValConst (CInt False 0), ValTemporary "temporary", ValGlobal "global"]
   , t "jmp" $ Jmp "target"
   , t "jnz" $ Jnz (ValConst $ CInt False 0) "target1" "target2"
