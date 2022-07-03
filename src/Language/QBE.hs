@@ -4,7 +4,53 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-module Language.QBE where
+module Language.QBE
+(
+-- * Identifiers
+RawIdent
+, Sigil(..)
+, Ident(..)
+-- * Types
+, BaseTy(..)
+, ExtTy(..)
+-- * Constants
+, Const(..)
+-- * Linkage
+, Linkage(..)
+-- * Definitions
+, Alignment
+, Size
+, Amount
+-- ** Aggregate types
+, TypeDef(..)
+, SubTy(..)
+-- ** Data
+, DataDef(..)
+, DataItem(..)
+, Field(..)
+-- ** Functions
+, FuncDef(..)
+, AbiTy(..)
+, Param(..)
+, Variadic(..)
+, prettyVariadic
+-- * Control
+, Val(..)
+, Block(..)
+, Jump(..)
+-- * Instructions
+, Phi(..)
+, PhiArg(..)
+, Inst(..)
+, Assignment(..)
+, pattern (:=)
+, IntRepr(..)
+, BinaryOp(..)
+, Comparison(..)
+, Arg(..)
+-- * Program
+, Program(..)
+) where
 
 import Data.Text (Text)
 import Data.Text.Short (ShortText)
