@@ -1,5 +1,5 @@
 export
-function :t $f
-(env %env, w %a, d %b, ...)
-{@l
-     ret }
+function :t $f (env %env, w %a, d %b, ...) {
+@l
+    ret 
+}

@@ -15,7 +15,7 @@ import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Maybe (maybeToList)
 import Prettyprinter
   ( Pretty(pretty), Doc, (<+>), vsep, hsep, hang, punctuate, group, flatAlt
-  , space, encloseSep, tupled, comma, equals, braces )
+  , space, encloseSep, tupled, comma, equals, braces, lbrace, rbrace )
 -- Instances
 import Data.Hashable (Hashable)
 import Control.DeepSeq (NFData)
@@ -194,12 +194,13 @@ data FuncDef = FuncDef [Linkage] (Maybe AbiTy) (Ident 'Global) (Maybe (Ident 'Te
 instance Pretty FuncDef where
   pretty (FuncDef linkage abiTy ident env params variadic blocks) = vsep
     [ vsep $ pretty <$> linkage
-    , "function" <+> pretty abiTy <+> pretty ident
-    , tupled $
+    , "function" <+> pretty abiTy <+> pretty ident <+> tupled (
         maybeToList (("env" <+>) . pretty <$> env)
         ++ fmap pretty params
         ++ maybeToList (prettyVariadic variadic)
-    , braces $ vsep $ toList $ pretty <$> blocks
+      ) <+> lbrace
+    , vsep $ toList $ pretty <$> blocks
+    , rbrace
     ]
 
 data AbiTy = AbiBaseTy BaseTy | AbiAggregateTy (Ident 'AggregateTy)

@@ -2,8 +2,8 @@
 data $str =
 {b "hello world", b 0}
 export
-function w $main
-()
-{@start
-     %r =w call $puts (l $str)
-     ret 0}
+function w $main () {
+@start
+    %r =w call $puts (l $str)
+    ret 0
+}
