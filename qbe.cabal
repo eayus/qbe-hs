@@ -19,7 +19,7 @@ copyright:          2022 Francesco Gazzetta
 category:           Language
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
-extra-source-files: golden/*.qbe
+extra-source-files: README.md golden/*.qbe
 tested-with:
     , GHC == 8.10.7
     , GHC == 9.0.2

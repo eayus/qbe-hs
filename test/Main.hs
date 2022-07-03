@@ -113,6 +113,10 @@ helloWorld = Program [] [helloString] [helloMain]
       Nothing [] NoVariadic $
       Block "start"
         []
-        [Call (Just ("r", AbiBaseTy Word)) (ValGlobal "puts") Nothing [Arg (AbiBaseTy Long) $ ValGlobal "str"] []]
+        [ Call (Just ("r", AbiBaseTy Word)) (ValGlobal "puts")
+            Nothing
+            [Arg (AbiBaseTy Long) $ ValGlobal "str"]
+            []
+        ]
         (Ret $ Just $ ValConst $ CInt False 0)
       :| []
