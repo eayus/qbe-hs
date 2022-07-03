@@ -85,6 +85,7 @@ instance Pretty ExtTy where
 --------------
 
 data Const
+  -- MAYBE just use a signed type
   = CInt Bool Word64 -- ^ The 'Bool' is whether to negate
   | CSingle Float
   | CDouble Double
@@ -122,13 +123,13 @@ type Amount = Word64
 -- ** Aggregate types
 ---------------------
 
-data Typedef
-  = Typedef (Ident 'AggregateTy) (Maybe Alignment) [(SubTy, Maybe Amount)]
+data TypeDef
+  = TypeDef (Ident 'AggregateTy) (Maybe Alignment) [(SubTy, Maybe Amount)]
   | Opaque (Ident 'AggregateTy) Alignment Size
   deriving (Show, Eq)
 
-instance Pretty Typedef where
-  pretty (Typedef ident alignment def) =
+instance Pretty TypeDef where
+  pretty (TypeDef ident alignment def) =
     "type" <+> pretty ident <+> equals
     <> maybe mempty (\x -> space <> pretty x) alignment
     <+> braced (prettyItem <$> def)
@@ -457,6 +458,19 @@ data Arg = Arg AbiTy Val
 
 instance Pretty Arg where
   pretty (Arg abiTy val) = pretty abiTy <+> pretty val
+
+-- * Program
+------------
+
+data Program = Program [TypeDef] [DataDef] [FuncDef]
+  deriving (Show, Eq)
+
+instance Pretty Program where
+  pretty (Program typeDefs dataDefs funcDefs) = vsep $ concat
+    [ pretty <$> typeDefs
+    , pretty <$> dataDefs
+    , pretty <$> funcDefs
+    ]
 
 -- * Utilities
 --------------

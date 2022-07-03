@@ -38,7 +38,7 @@ goldenTests = testGroup "golden tests"
       , CGlobal "global"
       ]
   , t "linkage" (Export, Section "secName" Nothing, Section "secName" $ Just "flag1 flag2")
-  , t "typedef" $ Typedef "t" (Just 8)
+  , t "typedef" $ TypeDef "t" (Just 8)
       [ (SubExtTy HalfWord, Just 16)
       , (SubAggregateTy "t1", Nothing)
       ]
@@ -82,6 +82,7 @@ goldenTests = testGroup "golden tests"
       , VaArg assignA "va"
       ]
       (Ret Nothing)
+  , t "hello_world" helloWorld
   ]
   where
     t name value = goldenVsAction
@@ -100,3 +101,18 @@ two = valInt 2
 
 assignA :: Assignment
 assignA = Assignment "a" Word
+
+helloWorld :: Program
+helloWorld = Program [] [helloString] [helloMain]
+  where
+    helloString = DataDef [] "str" Nothing
+      [ FieldExtTy Byte $ String "hello world" :| []
+      , FieldExtTy Byte $ Const (CInt False 0) :| []
+      ]
+    helloMain = FuncDef [Export] (Just $ AbiBaseTy Word) "main"
+      Nothing [] NoVariadic $
+      Block "start"
+        []
+        [Call (Just ("r", AbiBaseTy Word)) (ValGlobal "puts") Nothing [Arg (AbiBaseTy Long) $ ValGlobal "str"] []]
+        (Ret $ Just $ ValConst $ CInt False 0)
+      :| []
