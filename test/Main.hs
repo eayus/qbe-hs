@@ -47,10 +47,17 @@ goldenTests = testGroup "golden tests"
       [ FieldZero 16
       , FieldExtTy Byte $ Symbol "g" (Just 32) :| [String "foo\nbar\0baz", Const $ CInt True 1]
       ]
-  , t "val" [ValConst (CInt False 0), ValTemporary "temporary", ValGlobal "global"]
+  , t "function" $ FuncDef [Export] (Just $ AbiAggregateTy "t") "f"
+      (Just "env") [Param (AbiBaseTy Word) "a", Param (AbiBaseTy Double) "b"] Variadic $
+      Block "l" [] [] (Ret Nothing) :| []
+  , t "val" [valInt 0, ValTemporary "temporary", ValGlobal "global"]
   , t "jmp" $ Jmp "target"
-  , t "jnz" $ Jnz (ValConst $ CInt False 0) "target1" "target2"
+  , t "jnz" $ Jnz (valInt 0) "target1" "target2"
   , t "ret" $ Ret $ Just $ ValTemporary "x"
+  , t "phi" $ Phi "a" Word [PhiArg "b" $ valInt 1, PhiArg "c" $ valInt 2]
+  , t "call" $ Call (Just ("r", AbiBaseTy Word)) (ValGlobal "f") (Just $ valInt 1)
+      [Arg (AbiBaseTy Word) $ valInt 2, Arg (AbiAggregateTy "t") $ ValTemporary "a"]
+      [Arg (AbiBaseTy Word) $ valInt 3, Arg (AbiAggregateTy "t1") $ ValTemporary "b"]
   ]
   where
     t name value = goldenVsAction
@@ -58,3 +65,7 @@ goldenTests = testGroup "golden tests"
       ("golden" </> name <.> "qbe")
       (pure $ pretty value)
       (renderStrict . layoutPretty defaultLayoutOptions)
+
+valInt :: Int -> Val
+valInt i | i >= 0 = ValConst $ CInt False $ fromIntegral i
+         | otherwise = ValConst $ CInt True $ fromIntegral $ negate i

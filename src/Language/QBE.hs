@@ -13,8 +13,8 @@ import Data.Word (Word64)
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Maybe (maybeToList)
 import Prettyprinter
-  ( Pretty(pretty), (<+>), vsep, hsep
-  , space, encloseSep, lbrace, rbrace, comma, equals, braces )
+  ( Pretty(pretty), Doc, (<+>), vsep, hsep, hang, punctuate, group, flatAlt
+  , space, encloseSep, tupled, comma, equals, braces )
 -- Instances
 import Data.Hashable (Hashable)
 import Control.DeepSeq (NFData)
@@ -130,7 +130,7 @@ instance Pretty Typedef where
   pretty (Typedef ident alignment def) =
     "type" <+> pretty ident <+> equals
     <> maybe mempty (\x -> space <> pretty x) alignment
-    <+> encloseSep lbrace rbrace (comma <> space) (prettyItem <$> def)
+    <+> braced (prettyItem <$> def)
     where
       prettyItem (subTy, Nothing    ) = pretty subTy
       prettyItem (subTy, Just amount) = pretty subTy <+> pretty amount
@@ -158,7 +158,7 @@ instance Pretty DataDef where
     [ vsep $ pretty <$> linkage
     , hsep $ ("data" <+> pretty ident <+> equals)
            : maybeToList (("align" <+>) . pretty <$> alignment)
-    , encloseSep lbrace rbrace (comma <> space) (pretty <$> fields)
+    , braced (pretty <$> fields)
     ]
 
 data DataItem
@@ -189,14 +189,36 @@ instance Pretty Field where
 data FuncDef = FuncDef [Linkage] (Maybe AbiTy) (Ident 'Global) (Maybe (Ident 'Temporary)) [Param] Variadic (NonEmpty Block)
   deriving (Show, Eq)
 
+instance Pretty FuncDef where
+  pretty (FuncDef linkage abiTy ident env params variadic blocks) = vsep
+    [ vsep $ pretty <$> linkage
+    , "function" <+> pretty abiTy <+> pretty ident
+    , tupled $
+        maybeToList (("env" <+>) . pretty <$> env)
+        ++ fmap pretty params
+        ++ maybeToList (prettyVariadic variadic)
+    , braces $ vsep $ toList $ pretty <$> blocks
+    ]
+
 data AbiTy = AbiBaseTy BaseTy | AbiAggregateTy (Ident 'AggregateTy)
   deriving (Show, Eq)
+
+instance Pretty AbiTy where
+  pretty (AbiBaseTy baseTy) = pretty baseTy
+  pretty (AbiAggregateTy ident) = pretty ident
 
 data Param = Param AbiTy (Ident 'Temporary)
   deriving (Show, Eq)
 
+instance Pretty Param where
+  pretty (Param abiTy ident) = pretty abiTy <+> pretty ident
+
 data Variadic = Variadic | NoVariadic
   deriving (Show, Eq)
+
+prettyVariadic :: Variadic -> Maybe (Doc a)
+prettyVariadic Variadic = Just "..."
+prettyVariadic NoVariadic = Nothing
 
 -- * Control
 ------------
@@ -215,6 +237,14 @@ instance Pretty Val where
 data Block = Block (Ident 'Label) [Phi] [Inst] Jump
   deriving (Show, Eq)
 
+instance Pretty Block where
+  pretty (Block ident phis insts jump) = hang 4 $ vsep $ concat
+    [ [pretty ident]
+    , pretty <$> phis
+    , pretty <$> insts
+    , [pretty jump]
+    ]
+
 data Jump
   = Jmp (Ident 'Label)
   | Jnz Val (Ident 'Label) (Ident 'Label)
@@ -232,9 +262,21 @@ instance Pretty Jump where
 -- * Instructions
 -----------------
 
-data Phi = Phi (Ident 'Temporary) BaseTy [(Ident 'Label, Val)]
+data Phi = Phi (Ident 'Temporary) BaseTy [PhiArg]
   deriving (Show, Eq)
 
+instance Pretty Phi where
+  pretty (Phi ident baseTy args) =
+    pretty ident <+> equals <> pretty baseTy <+> "phi"
+    <+> hsep (punctuate comma $ pretty <$> args)
+
+data PhiArg = PhiArg (Ident 'Label) Val
+  deriving (Show, Eq)
+
+instance Pretty PhiArg where
+  pretty (PhiArg label val) = pretty label <+> pretty val
+
+-- MAYBE tuple the Ident + *Ty or make it into an Assignment type
 data Inst
   -- Arithmetic and Bits
   = BinaryOp (Ident 'Temporary) BaseTy BinaryOp Val Val
@@ -280,6 +322,40 @@ data Inst
   | VaArg (Ident 'Temporary) BaseTy (Ident 'Temporary)
   deriving (Show, Eq)
 
+instance Pretty Inst where
+  pretty (BinaryOp res resTy op v1 v2) = undefined
+  pretty (Neg res resTy v) = undefined
+  pretty (Store ty v address) = undefined
+  pretty (Load  res resTy loadTy addr) = undefined
+  pretty (LoadW res resTy intRepr addr) = undefined
+  pretty (LoadH res resTy intRepr addr) = undefined
+  pretty (LoadB res resTy intRepr addr) = undefined
+  pretty (Compare res resTy comp compTy v1 v2) = undefined
+  pretty (ExtW res        intRepr v) = undefined
+  pretty (ExtH res resTy intRepr v) = undefined
+  pretty (ExtB res resTy intRepr v) = undefined
+  pretty (Exts res v) = undefined
+  pretty (Truncd res v) = undefined
+  pretty (StoI res resTy intRepr v) = undefined
+  pretty (DtoI res resTy intRepr v) = undefined
+  pretty (WtoF res resTy intRepr v) = undefined
+  pretty (LtoF res resTy intRepr v) = undefined
+  pretty (Cast res resTy v) = undefined
+  pretty (Copy res resTy v) = undefined
+  pretty (Call assignment func env args variadics) = hsep $
+    maybeToList (prettyAssignment <$> assignment) ++
+    [ "call"
+    , pretty func
+    , tupled $ maybeToList (("env" <+>) . pretty <$> env)
+            ++ fmap pretty args
+            ++ variadics'
+    ]
+    where
+      prettyAssignment (ident, ty) = pretty ident <+> equals <> pretty ty
+      variadics' = if null variadics then [] else "..." : fmap pretty variadics
+  pretty (VaStart argList) = undefined
+  pretty (VaArg res resTy argList) = undefined
+
 data IntRepr = Signed | Unsigned
   deriving (Show, Eq)
 
@@ -309,6 +385,21 @@ data BinaryOp
   | Shl
   deriving (Show, Eq)
 
+instance Pretty BinaryOp where
+  pretty Add            = "add"
+  pretty Sub            = "sub"
+  pretty (Div Signed)   = "div"
+  pretty (Div Unsigned) = "udiv"
+  pretty Mul            = "mul"
+  pretty (Rem Signed)   = "rem"
+  pretty (Rem Unsigned) = "rem"
+  pretty Or             = "or"
+  pretty Xor            = "xor"
+  pretty And            = "and"
+  pretty Sar            = "sar"
+  pretty Shr            = "shr"
+  pretty Shl            = "shl"
+
 -- | Comparison operators.
 -- Where there's a @'Maybe' 'IntRepr'@, 'Nothing' means floating point
 -- (@le@, @lt@, @ge@, @gt@), while @'Just' r@ means integer
@@ -326,5 +417,34 @@ data Comparison
   | Uo -- ^ unordered (at least one operand is a NaN) (floating point only)
   deriving (Show, Eq)
 
+-- | This is not a 'Pretty' instance because it only builds _part_ of the
+-- instruction (for example "ule" instead of "culew"
+prettyComparison :: Comparison -> Doc ann
+prettyComparison Eq = "eq"
+prettyComparison Ne = "ne"
+prettyComparison (Le intRepr) = prettyMaybeIntRepr intRepr <> "le"
+prettyComparison (Lt intRepr) = prettyMaybeIntRepr intRepr <> "lt"
+prettyComparison (Ge intRepr) = prettyMaybeIntRepr intRepr <> "ge"
+prettyComparison (Gt intRepr) = prettyMaybeIntRepr intRepr <> "gt"
+prettyComparison O = "o"
+prettyComparison Uo = "uo"
+
+prettyMaybeIntRepr :: Maybe IntRepr -> Doc ann
+prettyMaybeIntRepr Nothing = mempty
+prettyMaybeIntRepr (Just Signed) = pretty 's'
+prettyMaybeIntRepr (Just Unsigned) = pretty 'u'
+
 data Arg = Arg AbiTy Val
   deriving (Show, Eq)
+
+instance Pretty Arg where
+  pretty (Arg abiTy val) = pretty abiTy <+> pretty val
+
+-- * Utilities
+--------------
+
+-- like 'list' and 'tupled'
+braced :: [Doc ann] -> Doc ann
+braced = group . encloseSep (flatAlt "{ " "{")
+                            (flatAlt " }" "}")
+                            ", "
