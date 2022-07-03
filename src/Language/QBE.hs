@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 module Language.QBE where
 
 import Data.Text (Text)
@@ -281,6 +282,8 @@ data Inst
   | Neg Assignment Val
   -- Memory
   | Store ExtTy Val Val
+  -- MAYBE collapse all the Loads in a single Load constructor and just discard
+  -- the intrepr when unused.
   | Load Assignment BaseTy Val -- ^ @\<ident\> =\<baseTy\> load\<baseTy\> \<val\>@
   | LoadW Assignment IntRepr Val -- ^ @\<ident\> =\<baseTy\> load\<intRepr\>w \<val\>@
   | LoadH Assignment IntRepr Val
@@ -296,10 +299,10 @@ data Inst
   | ExtB Assignment IntRepr Val
   -- | @exts@. There is only one possible instruction type, so there's
   -- only an 'Ident' instead of a full 'Assignment'
-  | Exts (Ident 'Temporary) Val
+  | ExtS (Ident 'Temporary) Val
   -- | @truncd@. There is only one possible instruction type, so there's
   -- only an 'Ident' instead of a full 'Assignment'
-  | Truncd (Ident 'Temporary) Val
+  | TruncD (Ident 'Temporary) Val
   -- | @stosi@/@stoui@
   | StoI Assignment IntRepr Val
   -- | @dtosi@/@dtoui@
@@ -320,25 +323,36 @@ data Inst
   deriving (Show, Eq)
 
 instance Pretty Inst where
-  pretty (BinaryOp assignment op v1 v2) = undefined
-  pretty (Neg assignment v) = undefined
-  pretty (Store ty v address) = undefined
-  pretty (Load  assignment loadTy addr) = undefined
-  pretty (LoadW assignment intRepr addr) = undefined
-  pretty (LoadH assignment intRepr addr) = undefined
-  pretty (LoadB assignment intRepr addr) = undefined
-  pretty (Compare assignment comp compTy v1 v2) = undefined
-  pretty (ExtW assignment intRepr v) = undefined
-  pretty (ExtH assignment intRepr v) = undefined
-  pretty (ExtB assignment intRepr v) = undefined
-  pretty (Exts res v) = undefined
-  pretty (Truncd res v) = undefined
-  pretty (StoI assignment intRepr v) = undefined
-  pretty (DtoI assignment intRepr v) = undefined
-  pretty (WtoF assignment intRepr v) = undefined
-  pretty (LtoF assignment intRepr v) = undefined
-  pretty (Cast assignment v) = undefined
-  pretty (Copy assignment v) = undefined
+  pretty (BinaryOp assignment op v1 v2) =
+    pretty assignment <+> pretty op <+> pretty v1 <> comma <+> pretty v2
+  pretty (Neg assignment v) =
+    pretty assignment <+> "neg" <+> pretty v
+  pretty (Store ty v address) =
+    "store" <> pretty ty <+> pretty v <> comma <+> pretty address
+  pretty (Load  assignment loadTy addr) =
+    pretty assignment <+> "load" <> pretty loadTy <+> pretty addr
+  pretty (LoadW assignment intRepr addr) =
+    pretty assignment <+> "load" <> pretty intRepr <> pretty 'w' <+> pretty addr
+  pretty (LoadH assignment intRepr addr) =
+    pretty assignment <+> "load" <> pretty intRepr <> pretty 'h' <+> pretty addr
+  pretty (LoadB assignment intRepr addr) =
+    pretty assignment <+> "load" <> pretty intRepr <> pretty 'b' <+> pretty addr
+  pretty (Compare assignment comp compTy v1 v2) =
+    pretty assignment <+> pretty 'c' <> pretty comp <> pretty compTy <+> pretty v1 <> comma <+> pretty v2
+  pretty (ExtW assignment intRepr v) =
+    pretty assignment <+> "ext" <> pretty intRepr <> pretty 'w' <+> pretty v
+  pretty (ExtH assignment intRepr v) =
+    pretty assignment <+> "ext" <> pretty intRepr <> pretty 'h' <+> pretty v
+  pretty (ExtB assignment intRepr v) =
+    pretty assignment <+> "ext" <> pretty intRepr <> pretty 'b' <+> pretty v
+  pretty (ExtS res v) = pretty res <+> equals <> pretty 'd' <+> "exts" <+> pretty v
+  pretty (TruncD res v) = pretty res <+> equals <> pretty 's' <+> "truncd" <+> pretty v
+  pretty (StoI assignment intRepr v) = pretty assignment <+> "sto" <> pretty intRepr <> pretty 'i' <+> pretty v
+  pretty (DtoI assignment intRepr v) = pretty assignment <+> "dto" <> pretty intRepr <> pretty 'i' <+> pretty v
+  pretty (WtoF assignment intRepr v) = pretty assignment <+> pretty intRepr <> "wtof" <+> pretty v
+  pretty (LtoF assignment intRepr v) = pretty assignment <+> pretty intRepr <> "ltof" <+> pretty v
+  pretty (Cast assignment v) = pretty assignment <+> "cast" <+> pretty v
+  pretty (Copy assignment v) = pretty assignment <+> "copy" <+> pretty v
   pretty (Call assignment func env args variadics) = hsep $
     maybeToList (prettyAssignment <$> assignment) ++
     [ "call"
@@ -350,11 +364,15 @@ instance Pretty Inst where
     where
       prettyAssignment (ident, ty) = pretty ident <+> equals <> pretty ty
       variadics' = if null variadics then [] else "..." : fmap pretty variadics
-  pretty (VaStart argList) = undefined
-  pretty (VaArg assignment argList) = undefined
+  pretty (VaStart argList) = "vastart" <+> pretty argList
+  pretty (VaArg assignment argList) = pretty assignment <+> "vaarg" <+> pretty argList
 
 data Assignment = Assignment (Ident 'Temporary) BaseTy
   deriving (Show, Eq)
+
+-- | Infix synonym of 'Assignment'
+pattern (:=) :: Ident 'Temporary -> BaseTy -> Assignment
+pattern (:=) ident ty = Assignment ident ty
 
 instance Pretty Assignment where
   pretty (Assignment ident ty) = pretty ident <+> equals <> pretty ty

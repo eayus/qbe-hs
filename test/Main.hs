@@ -58,6 +58,30 @@ goldenTests = testGroup "golden tests"
   , t "call" $ Call (Just ("r", AbiBaseTy Word)) (ValGlobal "f") (Just $ valInt 1)
       [Arg (AbiBaseTy Word) $ valInt 2, Arg (AbiAggregateTy "t") $ ValTemporary "a"]
       [Arg (AbiBaseTy Word) $ valInt 3, Arg (AbiAggregateTy "t1") $ ValTemporary "b"]
+  , t "inst" $ Block "l" []
+      [ BinaryOp assignA Add one two
+      , Neg assignA one
+      , Store Byte one two
+      , Load assignA Word one
+      , LoadW assignA Signed one
+      , LoadH assignA Signed one
+      , LoadB assignA Signed one
+      , Compare assignA (Le $ Just Unsigned) Word one two
+      , ExtW assignA Unsigned one
+      , ExtH assignA Unsigned one
+      , ExtB assignA Unsigned one
+      , ExtS "a" $ ValConst $ CSingle 1.2
+      , TruncD "a" $ ValConst $ CDouble 1.2
+      , StoI assignA Unsigned $ ValConst $ CSingle 1.2
+      , DtoI assignA Unsigned $ ValConst $ CDouble 1.2
+      , WtoF assignA Unsigned one
+      , LtoF assignA Unsigned one
+      , Cast assignA one
+      , Copy assignA one
+      , VaStart "va"
+      , VaArg assignA "va"
+      ]
+      (Ret Nothing)
   ]
   where
     t name value = goldenVsAction
@@ -69,3 +93,10 @@ goldenTests = testGroup "golden tests"
 valInt :: Int -> Val
 valInt i | i >= 0 = ValConst $ CInt False $ fromIntegral i
          | otherwise = ValConst $ CInt True $ fromIntegral $ negate i
+
+one, two :: Val
+one = valInt 1
+two = valInt 2
+
+assignA :: Assignment
+assignA = Assignment "a" Word

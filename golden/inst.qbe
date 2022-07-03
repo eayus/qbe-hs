@@ -1,0 +1,23 @@
+@l
+    %a =w add 1, 2
+    %a =w neg 1
+    storeb 1, 2
+    %a =w loadw 1
+    %a =w loadsw 1
+    %a =w loadsh 1
+    %a =w loadsb 1
+    %a =w culew 1, 2
+    %a =w extuw 1
+    %a =w extuh 1
+    %a =w extub 1
+    %a =d exts s_1.2
+    %a =s truncd d_1.2
+    %a =w stoui s_1.2
+    %a =w dtoui d_1.2
+    %a =w uwtof 1
+    %a =w ultof 1
+    %a =w cast 1
+    %a =w copy 1
+    vastart %va
+    %a =w vaarg %va
+    ret 
