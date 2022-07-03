@@ -420,22 +420,19 @@ data Comparison
   | Uo -- ^ unordered (at least one operand is a NaN) (floating point only)
   deriving (Show, Eq)
 
--- | This is not a 'Pretty' instance because it only builds _part_ of the
--- instruction (for example "ule" instead of "culew"
-prettyComparison :: Comparison -> Doc ann
-prettyComparison Eq = "eq"
-prettyComparison Ne = "ne"
-prettyComparison (Le intRepr) = prettyMaybeIntRepr intRepr <> "le"
-prettyComparison (Lt intRepr) = prettyMaybeIntRepr intRepr <> "lt"
-prettyComparison (Ge intRepr) = prettyMaybeIntRepr intRepr <> "ge"
-prettyComparison (Gt intRepr) = prettyMaybeIntRepr intRepr <> "gt"
-prettyComparison O = "o"
-prettyComparison Uo = "uo"
+instance Pretty Comparison where
+  pretty Eq = "eq"
+  pretty Ne = "ne"
+  pretty (Le intRepr) = pretty intRepr <> "le"
+  pretty (Lt intRepr) = pretty intRepr <> "lt"
+  pretty (Ge intRepr) = pretty intRepr <> "ge"
+  pretty (Gt intRepr) = pretty intRepr <> "gt"
+  pretty O = "o"
+  pretty Uo = "uo"
 
-prettyMaybeIntRepr :: Maybe IntRepr -> Doc ann
-prettyMaybeIntRepr Nothing = mempty
-prettyMaybeIntRepr (Just Signed) = pretty 's'
-prettyMaybeIntRepr (Just Unsigned) = pretty 'u'
+instance Pretty IntRepr where
+  pretty Signed = pretty 's'
+  pretty Unsigned = pretty 'u'
 
 data Arg = Arg AbiTy Val
   deriving (Show, Eq)
