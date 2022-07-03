@@ -219,6 +219,8 @@ instance Pretty Param where
 data Variadic = Variadic | NoVariadic
   deriving (Show, Eq)
 
+-- | 'Variadic' → @Just "..."@
+-- 'NoVariadic' → @Nothing@
 prettyVariadic :: Variadic -> Maybe (Doc a)
 prettyVariadic Variadic = Just "..."
 prettyVariadic NoVariadic = Nothing
@@ -286,8 +288,8 @@ data Inst
   | Store ExtTy Val Val
   -- MAYBE collapse all the Loads in a single Load constructor and just discard
   -- the intrepr when unused.
-  | Load Assignment BaseTy Val -- ^ @\<ident\> =\<baseTy\> load\<baseTy\> \<val\>@
-  | LoadW Assignment IntRepr Val -- ^ @\<ident\> =\<baseTy\> load\<intRepr\>w \<val\>@
+  | Load Assignment BaseTy Val
+  | LoadW Assignment IntRepr Val
   | LoadH Assignment IntRepr Val
   | LoadB Assignment IntRepr Val
   -- Comparisons
@@ -369,6 +371,7 @@ instance Pretty Inst where
   pretty (VaStart argList) = "vastart" <+> pretty argList
   pretty (VaArg assignment argList) = pretty assignment <+> "vaarg" <+> pretty argList
 
+-- | Represents the @%x =t@ part of an instruction.
 data Assignment = Assignment (Ident 'Temporary) BaseTy
   deriving (Show, Eq)
 
