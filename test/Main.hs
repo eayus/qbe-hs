@@ -54,7 +54,7 @@ goldenTests = testGroup "golden tests"
   , t "jmp" $ Jmp "target"
   , t "jnz" $ Jnz (valInt 0) "target1" "target2"
   , t "ret" $ Ret $ Just $ ValTemporary "x"
-  , t "phi" $ Phi "a" Word [PhiArg "b" $ valInt 1, PhiArg "c" $ valInt 2]
+  , t "phi" $ Phi (Assignment "a" Word) [PhiArg "b" $ valInt 1, PhiArg "c" $ valInt 2]
   , t "call" $ Call (Just ("r", AbiBaseTy Word)) (ValGlobal "f") (Just $ valInt 1)
       [Arg (AbiBaseTy Word) $ valInt 2, Arg (AbiAggregateTy "t") $ ValTemporary "a"]
       [Arg (AbiBaseTy Word) $ valInt 3, Arg (AbiAggregateTy "t1") $ ValTemporary "b"]

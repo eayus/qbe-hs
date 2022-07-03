@@ -262,13 +262,12 @@ instance Pretty Jump where
 -- * Instructions
 -----------------
 
-data Phi = Phi (Ident 'Temporary) BaseTy [PhiArg]
+data Phi = Phi Assignment [PhiArg]
   deriving (Show, Eq)
 
 instance Pretty Phi where
-  pretty (Phi ident baseTy args) =
-    pretty ident <+> equals <> pretty baseTy <+> "phi"
-    <+> hsep (punctuate comma $ pretty <$> args)
+  pretty (Phi assignment args) =
+    pretty assignment <+> "phi" <+> hsep (punctuate comma $ pretty <$> args)
 
 data PhiArg = PhiArg (Ident 'Label) Val
   deriving (Show, Eq)
@@ -276,72 +275,70 @@ data PhiArg = PhiArg (Ident 'Label) Val
 instance Pretty PhiArg where
   pretty (PhiArg label val) = pretty label <+> pretty val
 
--- MAYBE tuple the Ident + *Ty or make it into an Assignment type
 data Inst
   -- Arithmetic and Bits
-  = BinaryOp (Ident 'Temporary) BaseTy BinaryOp Val Val
-  | Neg (Ident 'Temporary) BaseTy Val
+  = BinaryOp Assignment BinaryOp Val Val
+  | Neg Assignment Val
   -- Memory
   | Store ExtTy Val Val
-  | Load (Ident 'Temporary) BaseTy BaseTy Val -- ^ @\<ident\> =\<baseTy\> load\<baseTy\> \<val\>@
-  | LoadW (Ident 'Temporary) BaseTy IntRepr Val -- ^ @\<ident\> =\<baseTy\> load\<intRepr\>w \<val\>@
-  | LoadH (Ident 'Temporary) BaseTy IntRepr Val
-  | LoadB (Ident 'Temporary) BaseTy IntRepr Val
+  | Load Assignment BaseTy Val -- ^ @\<ident\> =\<baseTy\> load\<baseTy\> \<val\>@
+  | LoadW Assignment IntRepr Val -- ^ @\<ident\> =\<baseTy\> load\<intRepr\>w \<val\>@
+  | LoadH Assignment IntRepr Val
+  | LoadB Assignment IntRepr Val
   -- Comparisons
-  | Compare (Ident 'Temporary) BaseTy Comparison BaseTy Val Val
+  | Compare Assignment Comparison BaseTy Val Val
   -- Conversions
-  -- | @extsw@/@extuw@. There is only one possible instruction type, so there's
-  -- no 'BaseTy' argument
-  | ExtW (Ident 'Temporary)        IntRepr Val
+  -- | @extsw@/@extuw@
+  | ExtW Assignment IntRepr Val
   -- | @extsh@/@extuh@
-  | ExtH (Ident 'Temporary) BaseTy IntRepr Val
+  | ExtH Assignment IntRepr Val
   -- | @extsb@/@extub@
-  | ExtB (Ident 'Temporary) BaseTy IntRepr Val
+  | ExtB Assignment IntRepr Val
   -- | @exts@. There is only one possible instruction type, so there's
-  -- no 'BaseTy' argument
+  -- only an 'Ident' instead of a full 'Assignment'
   | Exts (Ident 'Temporary) Val
   -- | @truncd@. There is only one possible instruction type, so there's
-  -- no 'BaseTy' argument
+  -- only an 'Ident' instead of a full 'Assignment'
   | Truncd (Ident 'Temporary) Val
   -- | @stosi@/@stoui@
-  | StoI (Ident 'Temporary) BaseTy IntRepr Val
+  | StoI Assignment IntRepr Val
   -- | @dtosi@/@dtoui@
-  | DtoI (Ident 'Temporary) BaseTy IntRepr Val
+  | DtoI Assignment IntRepr Val
   -- | @swtof@/@uwtof@
-  | WtoF (Ident 'Temporary) BaseTy IntRepr Val
+  | WtoF Assignment IntRepr Val
   -- | @sltof@/@ultof@
-  | LtoF (Ident 'Temporary) BaseTy IntRepr Val
+  | LtoF Assignment IntRepr Val
   -- Cast and Copy
-  | Cast (Ident 'Temporary) BaseTy Val
-  | Copy (Ident 'Temporary) BaseTy Val
+  | Cast Assignment Val
+  | Copy Assignment Val
   -- Calls
   -- | the fields are: assignment, function name, environment, arguments, variadic arguments
   | Call (Maybe (Ident 'Temporary, AbiTy)) Val (Maybe Val) [Arg] [Arg]
   -- Variadic
   | VaStart (Ident 'Temporary)
-  | VaArg (Ident 'Temporary) BaseTy (Ident 'Temporary)
+  | VaArg Assignment (Ident 'Temporary)
   deriving (Show, Eq)
 
 instance Pretty Inst where
-  pretty (BinaryOp res resTy op v1 v2) = undefined
-  pretty (Neg res resTy v) = undefined
+  pretty (BinaryOp assignment op v1 v2) = undefined
+  pretty (Neg assignment v) = undefined
   pretty (Store ty v address) = undefined
-  pretty (Load  res resTy loadTy addr) = undefined
-  pretty (LoadW res resTy intRepr addr) = undefined
-  pretty (LoadH res resTy intRepr addr) = undefined
-  pretty (LoadB res resTy intRepr addr) = undefined
-  pretty (Compare res resTy comp compTy v1 v2) = undefined
-  pretty (ExtW res        intRepr v) = undefined
-  pretty (ExtH res resTy intRepr v) = undefined
-  pretty (ExtB res resTy intRepr v) = undefined
+  pretty (Load  assignment loadTy addr) = undefined
+  pretty (LoadW assignment intRepr addr) = undefined
+  pretty (LoadH assignment intRepr addr) = undefined
+  pretty (LoadB assignment intRepr addr) = undefined
+  pretty (Compare assignment comp compTy v1 v2) = undefined
+  pretty (ExtW assignment intRepr v) = undefined
+  pretty (ExtH assignment intRepr v) = undefined
+  pretty (ExtB assignment intRepr v) = undefined
   pretty (Exts res v) = undefined
   pretty (Truncd res v) = undefined
-  pretty (StoI res resTy intRepr v) = undefined
-  pretty (DtoI res resTy intRepr v) = undefined
-  pretty (WtoF res resTy intRepr v) = undefined
-  pretty (LtoF res resTy intRepr v) = undefined
-  pretty (Cast res resTy v) = undefined
-  pretty (Copy res resTy v) = undefined
+  pretty (StoI assignment intRepr v) = undefined
+  pretty (DtoI assignment intRepr v) = undefined
+  pretty (WtoF assignment intRepr v) = undefined
+  pretty (LtoF assignment intRepr v) = undefined
+  pretty (Cast assignment v) = undefined
+  pretty (Copy assignment v) = undefined
   pretty (Call assignment func env args variadics) = hsep $
     maybeToList (prettyAssignment <$> assignment) ++
     [ "call"
@@ -354,7 +351,13 @@ instance Pretty Inst where
       prettyAssignment (ident, ty) = pretty ident <+> equals <> pretty ty
       variadics' = if null variadics then [] else "..." : fmap pretty variadics
   pretty (VaStart argList) = undefined
-  pretty (VaArg res resTy argList) = undefined
+  pretty (VaArg assignment argList) = undefined
+
+data Assignment = Assignment (Ident 'Temporary) BaseTy
+  deriving (Show, Eq)
+
+instance Pretty Assignment where
+  pretty (Assignment ident ty) = pretty ident <+> equals <> pretty ty
 
 data IntRepr = Signed | Unsigned
   deriving (Show, Eq)
