@@ -4,8 +4,9 @@ name:               qbe
 version:            1.1.0.0
 synopsis:           Types and prettyprinter for the IL of the QBE compiler backend
 description:
-  This library provides types representing the intermediate language of the QBE
-  compiler backend.
+  This library provides types representing
+  the [intermediate language](https://c9x.me/compile/doc/il.html)
+  of the [QBE](https://c9x.me/compile/) compiler backend.
   It also provides pretty-printing instances based on
   the [@prettyprinter@](https://hackage.haskell.org/package/prettyprinter)
   library, that emit the textual representation of the IL.

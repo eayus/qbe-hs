@@ -4,6 +4,32 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-|
+Module      : Language.QBE
+Description : Types and Pretty instances for the QBE IL
+Copyright   : (c) Francesco Gazzetta, 2022
+License     : BSD-3-Clause
+Maintainer  : Francesco Gazzetta <fgaz@fgaz.me>
+
+This module contains datatypes representing the various structures of
+the [intermediate language](https://c9x.me/compile/doc/il.html)
+of the [QBE](https://c9x.me/compile/) compiler backend.
+
+All datatypes also have 'Pretty' instances from
+the [@prettyprinter@](https://hackage.haskell.org/package/prettyprinter)
+library.
+You can render QBE IL source files, or any part of them, with something like:
+
+> render :: Pretty a => a -> Text
+> render = renderStrict . layoutPretty defaultLayoutOptions . pretty
+
+>>> render $ Ret $ Just $ ValTemporary "a"
+"ret %a"
+>>> Text.putStrLn $ render $ Program [] [] [FuncDef [] Nothing "main" …
+function w $main () {
+@start
+⋮
+-}
 module Language.QBE
 (
 -- * Identifiers
@@ -70,8 +96,10 @@ import Data.String (IsString)
 -- * Identifiers
 ----------------
 
+-- | A raw identifier string, with no sigil information attached
 type RawIdent = ShortText
 
+-- | Sigils are used to differentiate the verious types of 'Ident'ifier.
 data Sigil
   = AggregateTy -- ^ @:@
   | Global -- ^ @$@
@@ -110,7 +138,12 @@ instance Pretty (Ident 'Label) where
 -- * Types
 ----------
 
-data BaseTy = Word | Long | Single | Double
+-- | Base types
+data BaseTy
+  = Word -- ^ @w@
+  | Long -- ^ @l@
+  | Single -- ^ @s@
+  | Double -- ^ @d@
   deriving (Show, Eq)
 
 instance Pretty BaseTy where
@@ -119,7 +152,11 @@ instance Pretty BaseTy where
   pretty Single = pretty 's'
   pretty Double = pretty 'd'
 
-data ExtTy = BaseTy BaseTy | Byte | HalfWord
+-- | Extended types
+data ExtTy
+  = BaseTy BaseTy
+  | Byte -- ^ @b@
+  | HalfWord -- ^ @h@
   deriving (Show, Eq)
 
 instance Pretty ExtTy where
@@ -130,12 +167,13 @@ instance Pretty ExtTy where
 -- * Constants
 --------------
 
+-- | Constant/immediate
 data Const
   -- MAYBE just use a signed type
-  = CInt Bool Word64 -- ^ The 'Bool' is whether to negate
-  | CSingle Float
-  | CDouble Double
-  | CGlobal (Ident 'Global)
+  = CInt Bool Word64 -- ^ 64 bit integer. The 'Bool' is whether to negate.
+  | CSingle Float -- ^ Single-precision float
+  | CDouble Double -- ^ Double-precision float
+  | CGlobal (Ident 'Global) -- ^ Global symbol
   deriving (Show, Eq)
 
 instance Pretty Const where
@@ -149,8 +187,8 @@ instance Pretty Const where
 ------------
 
 data Linkage
-  = Export
-  | Section ShortText (Maybe Text)
+  = Export -- ^ Marks the defined item as visible outside the current file's scope
+  | Section ShortText (Maybe Text) -- ^ Section name, with optional linker flags
   deriving (Show, Eq)
 
 instance Pretty Linkage where
@@ -169,6 +207,7 @@ type Amount = Word64
 -- ** Aggregate types
 ---------------------
 
+-- | Aggregate type
 data TypeDef
   = TypeDef (Ident 'AggregateTy) (Maybe Alignment) [(SubTy, Maybe Amount)]
   | Opaque (Ident 'AggregateTy) Alignment Size
@@ -186,6 +225,7 @@ instance Pretty TypeDef where
     "type" <+> pretty ident <+> equals
     <+> "align" <+> pretty alignment <+> braces (pretty size)
 
+-- | A type that can be part of an aggregate type
 data SubTy
   = SubExtTy ExtTy
   | SubAggregateTy (Ident 'AggregateTy)
@@ -198,6 +238,7 @@ instance Pretty SubTy where
 -- ** Data
 ----------
 
+-- | Global object definition
 data DataDef = DataDef [Linkage] (Ident 'Global) (Maybe Alignment) [Field]
   deriving (Show, Eq)
 
@@ -233,6 +274,7 @@ instance Pretty Field where
 -- ** Functions
 ---------------
 
+-- TODO use record syntax on long types like this one
 -- | Function definition. The 'Maybe (Ident \'Temporary)' is the environment
 data FuncDef = FuncDef [Linkage] (Maybe AbiTy) (Ident 'Global) (Maybe (Ident 'Temporary)) [Param] Variadic (NonEmpty Block)
   deriving (Show, Eq)
@@ -256,12 +298,14 @@ instance Pretty AbiTy where
   pretty (AbiBaseTy baseTy) = pretty baseTy
   pretty (AbiAggregateTy ident) = pretty ident
 
+-- | Function parameter
 data Param = Param AbiTy (Ident 'Temporary)
   deriving (Show, Eq)
 
 instance Pretty Param where
   pretty (Param abiTy ident) = pretty abiTy <+> pretty ident
 
+-- | Indicates the presence or absence of a variadic marker
 data Variadic = Variadic | NoVariadic
   deriving (Show, Eq)
 
@@ -274,6 +318,7 @@ prettyVariadic NoVariadic = Nothing
 -- * Control
 ------------
 
+-- | Value, either an immediate or a global or temporary identifier.
 data Val
   = ValConst Const
   | ValTemporary (Ident 'Temporary)
@@ -285,6 +330,7 @@ instance Pretty Val where
   pretty (ValTemporary ident) = pretty ident
   pretty (ValGlobal ident) = pretty ident
 
+-- | Block of instructions beginning with a label and ending with a jump
 data Block = Block (Ident 'Label) [Phi] [Inst] Jump
   deriving (Show, Eq)
 
@@ -296,10 +342,11 @@ instance Pretty Block where
     , [pretty jump]
     ]
 
+-- | Jump instructions
 data Jump
-  = Jmp (Ident 'Label)
-  | Jnz Val (Ident 'Label) (Ident 'Label)
-  | Ret (Maybe Val)
+  = Jmp (Ident 'Label) -- ^ Unconditional jump
+  | Jnz Val (Ident 'Label) (Ident 'Label) -- ^ Conditional jump
+  | Ret (Maybe Val) -- ^ Function return
   deriving (Show, Eq)
 
 instance Pretty Jump where
@@ -313,6 +360,8 @@ instance Pretty Jump where
 -- * Instructions
 -----------------
 
+-- MAYBE change [PhiArg] to Map (Ident 'Label) Val
+-- | Phi instruction
 data Phi = Phi Assignment [PhiArg]
   deriving (Show, Eq)
 
@@ -320,16 +369,18 @@ instance Pretty Phi where
   pretty (Phi assignment args) =
     pretty assignment <+> "phi" <+> hsep (punctuate comma $ pretty <$> args)
 
+-- | Phi instruction argument, associating a 'Val' to a 'Label'
 data PhiArg = PhiArg (Ident 'Label) Val
   deriving (Show, Eq)
 
 instance Pretty PhiArg where
   pretty (PhiArg label val) = pretty label <+> pretty val
 
+-- | Instruction
 data Inst
   -- Arithmetic and Bits
-  = BinaryOp Assignment BinaryOp Val Val
-  | Neg Assignment Val
+  = BinaryOp Assignment BinaryOp Val Val -- ^ Binary arithmetic and bit operations
+  | Neg Assignment Val -- ^ @neg@
   -- Memory
   | Store ExtTy Val Val
   -- MAYBE collapse all the Loads in a single Load constructor and just discard
@@ -428,9 +479,11 @@ pattern (:=) ident ty = Assignment ident ty
 instance Pretty Assignment where
   pretty (Assignment ident ty) = pretty ident <+> equals <> pretty ty
 
+-- | Integer representation
 data IntRepr = Signed | Unsigned
   deriving (Show, Eq)
 
+-- | Binary arithmetic and bit operations
 data BinaryOp
   -- | @add@
   = Add
@@ -503,6 +556,7 @@ instance Pretty IntRepr where
   pretty Signed = pretty 's'
   pretty Unsigned = pretty 'u'
 
+-- | Function argument
 data Arg = Arg AbiTy Val
   deriving (Show, Eq)
 
@@ -512,6 +566,7 @@ instance Pretty Arg where
 -- * Program
 ------------
 
+-- | Datatypre representing a QBE IL source file
 data Program = Program [TypeDef] [DataDef] [FuncDef]
   deriving (Show, Eq)
 
@@ -525,7 +580,7 @@ instance Pretty Program where
 -- * Utilities
 --------------
 
--- like 'list' and 'tupled'
+-- | Like 'list' and 'tupled', but with braces
 braced :: [Doc ann] -> Doc ann
 braced = group . encloseSep (flatAlt "{ " "{")
                             (flatAlt " }" "}")
