@@ -382,12 +382,17 @@ data Inst
   = BinaryOp Assignment BinaryOp Val Val -- ^ Binary arithmetic and bit operations
   | Neg Assignment Val -- ^ @neg@
   -- Memory
+  -- | @stored@/@stores@/@storel@/@storew@/@storeh@/@storeb@
   | Store ExtTy Val Val
   -- MAYBE collapse all the Loads in a single Load constructor and just discard
   -- the intrepr when unused.
+  -- | @loadw@/@loadl@/@loads@/@loadd@
   | Load Assignment BaseTy Val
+  -- | @loadsw@/@loaduw@
   | LoadW Assignment IntRepr Val
+  -- | @loadsh@/@loaduh@
   | LoadH Assignment IntRepr Val
+  -- | @loadsb@/@loadub@
   | LoadB Assignment IntRepr Val
   -- Comparisons
   | Compare Assignment Comparison BaseTy Val Val
@@ -413,13 +418,17 @@ data Inst
   -- | @sltof@/@ultof@
   | LtoF Assignment IntRepr Val
   -- Cast and Copy
+  -- | @cast@
   | Cast Assignment Val
+  -- | @copy@
   | Copy Assignment Val
   -- Calls
-  -- | the fields are: assignment, function name, environment, arguments, variadic arguments
+  -- | @call@. The fields are: assignment, function name, environment, arguments, variadic arguments
   | Call (Maybe (Ident 'Temporary, AbiTy)) Val (Maybe Val) [Arg] [Arg]
   -- Variadic
+  -- | @vastart@, initializes a variable argument list
   | VaStart (Ident 'Temporary)
+  -- | @vaarg@, fetches the next argument from a variable argument list
   | VaArg Assignment (Ident 'Temporary)
   deriving (Show, Eq)
 
