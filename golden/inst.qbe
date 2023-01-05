@@ -6,6 +6,7 @@
     %a =w loadsw 1
     %a =w loadsh 1
     %a =w loadsb 1
+    %a =w alloc4 8
     %a =w culew 1, 2
     %a =w extuw 1
     %a =w extuh 1

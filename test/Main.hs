@@ -66,6 +66,7 @@ goldenTests = testGroup "golden tests"
       , LoadW assignA Signed one
       , LoadH assignA Signed one
       , LoadB assignA Signed one
+      , Alloc assignA Four 8
       , Compare assignA (Le $ Just Unsigned) Word one two
       , ExtW assignA Unsigned one
       , ExtH assignA Unsigned one

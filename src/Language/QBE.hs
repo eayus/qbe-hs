@@ -72,6 +72,7 @@ RawIdent
 , pattern (:=)
 , IntRepr(..)
 , BinaryOp(..)
+, AllocSize(..)
 , Comparison(..)
 , Arg(..)
 -- * Program
@@ -394,6 +395,8 @@ data Inst
   | LoadH Assignment IntRepr Val
   -- | @loadsb@/@loadub@
   | LoadB Assignment IntRepr Val
+  -- | @alloc4@/@alloc8@/@alloc16@
+  | Alloc Assignment AllocSize Alignment
   -- Comparisons
   | Compare Assignment Comparison BaseTy Val Val
   -- Conversions
@@ -447,6 +450,8 @@ instance Pretty Inst where
     pretty assignment <+> "load" <> pretty intRepr <> pretty 'h' <+> pretty addr
   pretty (LoadB assignment intRepr addr) =
     pretty assignment <+> "load" <> pretty intRepr <> pretty 'b' <+> pretty addr
+  pretty (Alloc assignment size alignment) =
+    pretty assignment <+> "alloc" <> pretty size <+> pretty alignment
   pretty (Compare assignment comp compTy v1 v2) =
     pretty assignment <+> pretty 'c' <> pretty comp <> pretty compTy <+> pretty v1 <> comma <+> pretty v2
   pretty (ExtW assignment intRepr v) =
@@ -533,6 +538,18 @@ instance Pretty BinaryOp where
   pretty Sar            = "sar"
   pretty Shr            = "shr"
   pretty Shl            = "shl"
+
+-- | Allocation Size
+data AllocSize
+  = Four
+  | Eight
+  | Sixteen
+  deriving (Show, Eq)
+
+instance Pretty AllocSize where
+  pretty Four = pretty $ show (4 :: Integer)
+  pretty Eight = pretty $ show (8 :: Integer)
+  pretty Sixteen = pretty $ show (16  :: Integer)
 
 -- | Comparison operators.
 -- Where there's a @'Maybe' 'IntRepr'@, 'Nothing' means floating point
